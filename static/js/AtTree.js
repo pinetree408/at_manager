@@ -1,5 +1,5 @@
 function BuildVerticaLTree(treeData, treeContainerDom) {
-  var margin = { top: 40, right: 120, bottom: 20, left: 120 };
+  var margin = { top: 200, right: 120, bottom: 20, left: 120 };
   var width = $(window).width() - margin.right - margin.left + 1000;
   var height = $(window).height() - margin.top - margin.bottom + 700;
 
@@ -29,7 +29,15 @@ function BuildVerticaLTree(treeData, treeContainerDom) {
     var nodeEnter = node.enter().append("g").attr("class", "node")
 	              .attr("transform", function (d) {
 	                return "translate(" + source.x0 + "," + source.y0 + ")";
-	              }).on("click", nodeclick);
+	              }).on("click", nodeclick)
+                      .on("mouseover", function (d) {
+                        $("#my_popup").text(d.var);
+		        $('#my_popup').popup({
+			  tooltipanchor: event.target,
+			  autoopen: true,
+			  type: 'tooltip'
+		        });
+                      });
     nodeEnter.append("circle")
       .attr("r", 10)
       .attr("stroke", function (d) { return d.children || d._children ? "steelblue" : "#00c13f"; })
@@ -38,6 +46,7 @@ function BuildVerticaLTree(treeData, treeContainerDom) {
       .attr("y", function (d) { return d.children || d._children ? -18 : 18;})
       .attr("dy", ".35em")
       .attr("text-anchor", "middle")
+      //.text(function (d) { return d.focusable_sum; })
       .text(function (d) { return d.name; })
       .style("fill-opacity", 1e-6);
     // Transition nodes to their new position.
@@ -52,7 +61,7 @@ function BuildVerticaLTree(treeData, treeContainerDom) {
           if (d.focusable) {
             fill = "red";
 	  } else {
-	    fill = "lightstellblue";
+	    fill = "lightsteelblue";
 	  }
 	} else {
           if (d.focusable) {
