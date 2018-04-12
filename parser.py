@@ -36,7 +36,8 @@ def get_tree(f_name):
                 'focusable_sum': focusable_count,
                 'var': content,
                 'parent': 'null',
-                'children': []
+                'children': [],
+                'children_hide': []
             }
             if len(tree_data) == 0:
                 tree_data.append(item)
@@ -60,16 +61,33 @@ def focusable_count(json_data):
     focusable_search(tree_data[0])
     return tree_data
 
-def dfs(node):
-    for i, child in enumerate(node['children']):
-        if child['focusable_sum'] != 0:
-            dfs(child)
+def dfs_with_child(node):
+    for child in node['children'][:]:
+        if child['focusable_sum'] > 0:
+            if not (child['focusable'] and child['focusable_sum'] == 1):
+                dfs_with_child(child)
         else:
-            del node['children'][i]
+            node['children_hide'].append(child)
+            node['children'].remove(child)
 
-def get_focusable_tree(json_data):
+
+def dfs_without_child(node):
+    for child in node['children'][:]:
+        if child['focusable_sum'] > 0:
+            dfs_without_child(child)
+        else:
+            node['children_hide'].append(child)
+            node['children'].remove(child)
+
+
+def get_focusable_tree_with_child(json_data):
     tree_data = focusable_count(json_data)
-    dfs(tree_data[0])
+    dfs_with_child(tree_data[0])
+    return json.dumps(tree_data)
+
+def get_focusable_tree_without_child(json_data):
+    tree_data = focusable_count(json_data)
+    dfs_without_child(tree_data[0])
     return json.dumps(tree_data)
 
 if __name__ == "__main__":
