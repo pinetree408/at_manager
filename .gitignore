@@ -6,3 +6,6 @@ venv/
 
 # for python
 *.py[cod]
+
+# for project
+*.txt

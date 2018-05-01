@@ -90,5 +90,45 @@ def get_focusable_tree_without_child(json_data):
     dfs_without_child(tree_data[0])
     return json.dumps(tree_data)
 
+def get_focusable_list(f_name):
+    path = folder_name + '/' + f_name
+
+    focusable_list = []
+    with open(path, 'r') as f_r:
+        lines = f_r.read().splitlines()
+        for line in lines:
+            level = 0
+            for i in range(len(line)):
+                if line[i] == '+':
+                    level += 1
+                else:
+                    break
+            contents = line[level:]
+            content_list = contents.split(' ')
+            is_focusable = content_list[1] == "focusable"
+            size = ""
+            for i, content in enumerate(content_list):
+                if content[:4] == 'size':
+                    size = content + content_list[i+1]
+                    break
+
+            if is_focusable:
+                item = {
+                    "tag" : content_list[0],
+                    "size" : size,
+                    "level" : level/2,
+                    "index" : len(focusable_list)
+                }
+                focusable_list.append(item)
+
+    return focusable_list
+
+def generate_txt_file_with_focusalbe_list(out_name):
+
+    f_name = 'mobile_naver.AT'
+    focusable_list = get_focusable_list(f_name)
+    with open(out_name, 'w') as f_w:
+        json.dump(focusable_list, f_w)
+
 if __name__ == "__main__":
-    get_focusable_tree(get_tree())
+    generate_txt_file_with_focusalbe_list('json.txt')
