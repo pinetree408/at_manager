@@ -1,3 +1,4 @@
+import re
 import json
 
 folder_name = 'AT'
@@ -23,27 +24,20 @@ def create_content_object(index, line):
         else:
             break
     contents = line[level:]
-    content_list = contents.split(' ')
+    m = re.findall('[a-zA-Z]+\s|[a-zA-Z]+=.[^=]+\s', contents + ' ')
+    content_list = [temp.strip() for temp in m]
 
     is_focusable = False
     focusable_count = 0
 
     var_object = {}
     for j, content in enumerate(content_list):
-        content = content.strip()
-        if len(content) == 0 or content[-1] == ')':
-            continue
-
-        target = content
-        if content[-1] == ',':
-            target = target + content_list[j + 1]
-
-        if len(target.split('=')) == 2:
-            target_key = target.split('=')[0]
-            target_value = target.split('=')[1]
+        if len(content.split('=')) == 2:
+            target_key = content.split('=')[0]
+            target_value = content.split('=')[1]
             var_object[target_key] = target_value
         else:
-            if target == "focusable":
+            if content == "focusable":
                 is_focusable = True
                 focusable_count = 1
 
@@ -160,4 +154,4 @@ def generate_txt_file_with_focusalbe_list(out_name):
         json.dump(focusable_list, f_w)
 
 if __name__ == "__main__":
-    print json.loads(get_tree('naver.AT'))[0]['visibleChildren'][0]['children']
+    print json.loads(get_tree('naver.AT'))
