@@ -4,14 +4,62 @@ folder_name = 'AT'
 
 def insert(tree, item):
     if len(tree['children']) == 0:
-        item['parent'] = tree['name']
-        tree['children'].append(item)
+        item['parent'] = tree['pk']
+        tree['children'].append(item['pk'])
+        tree['visibleChildren'].append(item)
     else:
-        if tree['children'][-1]['level'] == item['level']:
-            item['parent'] = tree['name']
-            tree['children'].append(item)
-        elif tree['children'][-1]['level'] < item['level']:
-            insert(tree['children'][-1],item)
+        if tree['visibleChildren'][-1]['level'] == item['level']:
+            item['parent'] = tree['pk']
+            tree['children'].append(item['pk'])
+            tree['visibleChildren'].append(item)
+        elif tree['visibleChildren'][-1]['level'] < item['level']:
+            insert(tree['visibleChildren'][-1], item)
+
+def create_content_object(index, line):
+    level = 0
+    for i in range(len(line)):
+        if line[i] == '+':
+            level += 1
+        else:
+            break
+    contents = line[level:]
+    content_list = contents.split(' ')
+
+    is_focusable = False
+    focusable_count = 0
+
+    var_object = {}
+    for j, content in enumerate(content_list):
+        content = content.strip()
+        if len(content) == 0 or content[-1] == ')':
+            continue
+
+        target = content
+        if content[-1] == ',':
+            target = target + content_list[j + 1]
+
+        if len(target.split('=')) == 2:
+            target_key = target.split('=')[0]
+            target_value = target.split('=')[1]
+            var_object[target_key] = target_value
+        else:
+            if target == "focusable":
+                is_focusable = True
+                focusable_count = 1
+
+    content_obj = {
+        'pk': index, 
+        'level': level/2,
+        'atTag': content_list[0],
+        'isFocusable': is_focusable,
+        'focusableSum': focusable_count,
+        'var': var_object,
+        'parent': 'null',
+        'children': [],
+        'visibleChildren': [],
+    }
+    return content_obj
+
 
 def get_tree(f_name):
     path = folder_name + '/' + f_name
@@ -19,42 +67,25 @@ def get_tree(f_name):
     tree_data = []
     with open(path, 'r') as f_r:
         lines = f_r.read().splitlines()
-        for line in lines:
-            level = 0
-            for i in range(len(line)):
-                if line[i] == '+':
-                    level += 1
-                else:
-                    break
-            content = line[level:]
-            is_focusable = content.split(' ')[1] == "focusable"
-            focusable_count = 1 if is_focusable == True else 0
-            item = {
-                'level': level/2,
-                'name': content.split(' ')[0],
-                'focusable': is_focusable,
-                'focusable_sum': focusable_count,
-                'var': content,
-                'parent': 'null',
-                'children': [],
-                'children_hide': []
-            }
+        for index, line in enumerate(lines):
+            item = create_content_object(index, line)
             if len(tree_data) == 0:
                 tree_data.append(item)
             else:
                 insert(tree_data[0], item)
     return json.dumps(tree_data)
 
+
 def focusable_search(node):
-    focusable_sum = node['focusable_sum']
+    focusable_sum = node['focusableSum']
     for child in node['children']:
         if len(child['children']) != 0:
             focusable_sum += focusable_search(child)
         else:
             if child['focusable'] == True:
                 focusable_sum += 1
-    node['focusable_sum'] = focusable_sum
-    return node['focusable_sum']
+    node['focusableSum'] = focusable_sum
+    return node['focusableSum']
 
 def focusable_count(json_data):
     tree_data = json.loads(json_data)
@@ -63,21 +94,19 @@ def focusable_count(json_data):
 
 def dfs_with_child(node):
     for child in node['children'][:]:
-        if child['focusable_sum'] > 0:
-            if not (child['focusable'] and child['focusable_sum'] == 1):
+        if child['focusableSum'] > 0:
+            if not (child['focusable'] and child['focusableSum'] == 1):
                 dfs_with_child(child)
         else:
-            node['children_hide'].append(child)
-            node['children'].remove(child)
+            node['visibleChildren'].remove(child)
 
 
 def dfs_without_child(node):
     for child in node['children'][:]:
-        if child['focusable_sum'] > 0:
+        if child['focusableSum'] > 0:
             dfs_without_child(child)
         else:
-            node['children_hide'].append(child)
-            node['children'].remove(child)
+            node['visibleChildren'].remove(child)
 
 
 def get_focusable_tree_with_child(json_data):
@@ -125,10 +154,10 @@ def get_focusable_list(f_name):
 
 def generate_txt_file_with_focusalbe_list(out_name):
 
-    f_name = 'mobile_naver.AT'
+    f_name = 'naver.AT'
     focusable_list = get_focusable_list(f_name)
     with open(out_name, 'w') as f_w:
         json.dump(focusable_list, f_w)
 
 if __name__ == "__main__":
-    generate_txt_file_with_focusalbe_list('json.txt')
+    print json.loads(get_tree('naver.AT'))[0]['visibleChildren'][0]['children']
