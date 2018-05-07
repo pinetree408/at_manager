@@ -1,4 +1,4 @@
-function BuildVerticaLTree(treeData, treeContainerDom) {
+function buildVerticalTree(treeData, treeContainerDom) {
   var margin = { top: 200, right: 120, bottom: 20, left: 120 };
   var width = $(window).width() - margin.right - margin.left + 1000;
   var height = $(window).height() - margin.top - margin.bottom + 700;
@@ -24,20 +24,12 @@ function BuildVerticaLTree(treeData, treeContainerDom) {
     nodes.forEach(function (d) { d.y = d.depth * 50; });
     // Declare the nodes…
     var node = svg.selectAll("g.node")
-	         .data(nodes, function (d) { return d.id || (d.id = ++i); });
+	         .data(nodes, function (d) { return d.id;});
     // Enter the nodes.
     var nodeEnter = node.enter().append("g").attr("class", "node")
 	              .attr("transform", function (d) {
 	                return "translate(" + source.x0 + "," + source.y0 + ")";
-	              }).on("click", nodeclick)
-                      .on("mouseover", function (d) {
-                        $("#my_popup").text(d.var);
-		        $('#my_popup').popup({
-			  tooltipanchor: event.target,
-			  autoopen: true,
-			  type: 'tooltip'
-		        });
-                      });
+	              }).on("click", nodeclick);
     nodeEnter.append("circle")
       .attr("r", 10)
       .attr("stroke", function (d) { return d.children || d._children ? "steelblue" : "#00c13f"; })
@@ -46,25 +38,23 @@ function BuildVerticaLTree(treeData, treeContainerDom) {
       .attr("y", function (d) { return d.children || d._children ? -18 : 18;})
       .attr("dy", ".35em")
       .attr("text-anchor", "middle")
-      //.text(function (d) { return d.focusable_sum; })
-      .text(function (d) { return d.name; })
+      .text(function (d) { return d.pk; })
       .style("fill-opacity", 1e-6);
     // Transition nodes to their new position.
     //horizontal tree
     var nodeUpdate = node.transition().duration(duration)
 	               .attr("transform", function (d) { return "translate(" + d.x + "," + d.y + ")"; });
     nodeUpdate.select("circle").attr("r", 10)
-      //.style("fill", function (d) { return d._children ? "lightsteelblue" : "#fff"; });
       .style("fill", function (d) {
 	var fill = "#fff";
         if (d._children) {
-          if (d.focusable) {
+          if (d.isFocusable) {
             fill = "red";
 	  } else {
 	    fill = "lightsteelblue";
 	  }
 	} else {
-          if (d.focusable) {
+          if (d.isFocusable) {
             fill = "red";
 	  }
 	}
@@ -104,6 +94,7 @@ function BuildVerticaLTree(treeData, treeContainerDom) {
 
   // Toggle children on click.
   function nodeclick(d) {
+    console.log(d);
     if (d.children) {
       d._children = d.children;
       d.children = null;

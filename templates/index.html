@@ -17,8 +17,8 @@
     </div>
     <form action = "http://localhost:5000/" method = "post">
       <select name="site">
-        <option value="mobile_naver.AT">Naver</option>
-        <option value="mobile_verge.AT">Verge</option>
+        <option value="naver.AT">Naver</option>
+        <option value="verge.AT">Verge</option>
       </select>
       <select name="type">
         <option value="all">All</option>
@@ -30,7 +30,7 @@
     <div id="tree"></div>
     <script>
       var treeData = JSON.parse({{ json_dump|tojson|safe }});
-      BuildVerticaLTree(treeData[0], "#tree");
+      buildVerticalTree(treeData[0], "#tree");
     </script>
   </body>
 </html>

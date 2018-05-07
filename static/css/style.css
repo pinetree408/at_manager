@@ -21,7 +21,7 @@ body{
   stroke-width: 2px;
 }
 
-.tree {
+#tree {
   margin-bottom: 10px;
   overflow: auto;
-}
+}  
