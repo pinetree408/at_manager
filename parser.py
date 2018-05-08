@@ -104,6 +104,16 @@ def dfs_without_child(node):
         else:
             node['children'].remove(child)
 
+def dfs_without_child_reduction(node):
+    if len(node['children']) == 1:
+        if len(node['children'][0]['children']) > 0:
+            node['children'] = node['children'][0]['children']
+            dfs_without_child_reduction(node)
+        else:
+            node.update(node['children'][0])
+    else:
+        for child in node['children'][:]:
+            dfs_without_child_reduction(child)
 
 def get_focusable_tree_with_child(json_data):
     tree_data = focusable_count(json_data)
@@ -113,6 +123,12 @@ def get_focusable_tree_with_child(json_data):
 def get_focusable_tree_without_child(json_data):
     tree_data = focusable_count(json_data)
     dfs_without_child(tree_data[0])
+    return json.dumps(tree_data)
+
+def get_focusable_tree_without_child_reduction(json_data):
+    tree_data = focusable_count(json_data)
+    dfs_without_child(tree_data[0])
+    dfs_without_child_reduction(tree_data[0])
     return json.dumps(tree_data)
 
 if __name__ == "__main__":
