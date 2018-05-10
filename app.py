@@ -6,7 +6,7 @@ app = Flask(__name__)
 
 @app.route('/', methods = ['POST', 'GET'])
 def index():
-    f_name = 'wiki.AT'
+    f_name = 'naver.AT'
     at_type = 'all'
     if request.method == 'POST':
         f_name = str(request.form['site'])
@@ -19,9 +19,9 @@ def index():
         tree = parser.get_focusable_tree_without_child(tree)
     elif at_type == 'focusable_without_child_reduction':
         tree = parser.get_focusable_tree_without_child_reduction(tree)
-    
-    
-    return render_template('index.html', f_name=f_name, at_type=at_type, json_dump=tree)
+    html_tag_ratio = parser.get_html_tag_portion(tree)
+
+    return render_template('index.html', f_name=f_name, at_type=at_type, json_dump=tree, html_tag_ratio=html_tag_ratio)
 
 if __name__ == '__main__':
     app.run()

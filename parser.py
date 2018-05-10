@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import re
 import json
 
@@ -32,12 +33,19 @@ def create_content_object(index, line):
     is_focusable = False
     focusable_count = 0
 
+    html_tag = ""
     var_object = {}
     for j, content in enumerate(content_list):
         if len(content.split('=')) == 2:
             target_key = content.split('=')[0]
-            target_value = content.split('=')[1]
-            var_object[target_key] = target_value
+            target_value = content.split('=')[1].strip()
+            if target_value[0] == "'":
+                target_value = target_value[1:-1].strip()
+            if target_key == "htmlTag":
+                if len(target_value) > 0 and not "<" in target_value:
+                    html_tag = target_value
+            else:
+                var_object[target_key] = target_value
         else:
             if content == "focusable":
                 is_focusable = True
@@ -47,6 +55,7 @@ def create_content_object(index, line):
         'id': index, 
         'level': level/2,
         'atTag': content_list[0],
+        'htmlTag': html_tag,
         'isFocusable': is_focusable,
         'focusableSum': focusable_count,
         'var': var_object,
@@ -129,7 +138,28 @@ def get_focusable_tree_without_child_reduction(json_data):
     tree_data = focusable_count(json_data)
     dfs_without_child(tree_data[0])
     dfs_without_child_reduction(tree_data[0])
-    return json.dumps(tree_data)
+    return json.dumps(tree_data, indent=4)
+
+def dfs_html_tag(node, html_tag):
+    for child in node['children'][:]:
+        if not child['htmlTag'] == '':
+            if child['htmlTag'] in html_tag:
+                html_tag[child['htmlTag']] += 1
+            else:
+                html_tag[child['htmlTag']] = 1
+        dfs_html_tag(child, html_tag)
+
+def get_html_tag_portion(json_data):
+    tree_data = json.loads(json_data)
+    html_tag = {}
+    dfs_html_tag(tree_data[0], html_tag)
+    return json.dumps([html_tag])
+
+def convert_json_to_txt(json_data):
+    with open('data.txt', 'w') as outfile:
+        outfile.write(json_data)
 
 if __name__ == "__main__":
-    print json.loads(get_tree('naver.AT'))
+    tree = get_tree('naver.AT')
+    tree = get_focusable_tree_without_child_reduction(tree)
+    convert_json_to_txt(tree)
