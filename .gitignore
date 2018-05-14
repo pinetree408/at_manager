@@ -8,4 +8,4 @@ venv/
 *.py[cod]
 
 # for project
-*.txt
+*.json
