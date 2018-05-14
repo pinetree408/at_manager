@@ -45,22 +45,9 @@ function buildVerticalTree(treeData, treeContainerDom) {
     var nodeUpdate = node.transition().duration(duration)
 	               .attr("transform", function (d) { return "translate(" + d.x + "," + d.y + ")"; });
     nodeUpdate.select("circle").attr("r", 10)
-      .style("fill", function (d) {
-	var fill = "#fff";
-        if (d._children) {
-          if (d.isFocusable) {
-            fill = "red";
-	  } else {
-	    fill = "lightsteelblue";
-	  }
-	} else {
-          if (d.isFocusable) {
-            fill = "red";
-	  }
-	}
-        return fill;
-      });
+      .style("fill", function (d) { return d._children ? "lightsteelblue" : "#fff"; });
     nodeUpdate.select("text").style("fill-opacity", 1);
+
     // Transition exiting nodes to the parent's new position.
     var nodeExit = node.exit().transition().duration(duration)
       .attr("transform", function (d) { return "translate(" + source.x + "," + source.y + ")"; })

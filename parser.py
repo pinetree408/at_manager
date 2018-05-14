@@ -4,16 +4,16 @@ import json
 
 folder_name = 'AT'
 
-def insert(tree, item):
+def insert(tree, node):
     if len(tree['children']) == 0:
-        item['parent'] = tree['id']
-        tree['children'].append(item)
+        node['parent'] = tree['id']
+        tree['children'].append(node)
     else:
-        if tree['children'][-1]['level'] == item['level']:
-            item['parent'] = tree['id']
-            tree['children'].append(item)
-        elif tree['children'][-1]['level'] < item['level']:
-            insert(tree['children'][-1], item)
+        if tree['children'][-1]['depth'] == node['depth']:
+            node['parent'] = tree['id']
+            tree['children'].append(node)
+        elif tree['children'][-1]['depth'] < node['depth']:
+            insert(tree['children'][-1], node)
 
 def get_level(line):
     level = 0
@@ -24,16 +24,13 @@ def get_level(line):
             break
     return level
 
-def create_content_object(index, line):
-    level = get_level(line)
-    contents = line[level:]
-    m = re.findall('[a-zA-Z]+\s|[a-zA-Z]+=.[^=]+\s', contents + ' ')
-    content_list = [temp.strip() for temp in m]
+def create_content_object(index, contents):
+    matched_contents = re.findall('[a-zA-Z]+\s|[a-zA-Z]+=.[^=]+\s', contents + ' ')
+    content_list = [content.strip() for content in matched_contents]
 
     is_focusable = False
-    focusable_count = 0
-
     html_tag = ""
+
     var_object = {}
     for j, content in enumerate(content_list):
         if len(content.split('=')) == 2:
@@ -49,18 +46,13 @@ def create_content_object(index, line):
         else:
             if content == "focusable":
                 is_focusable = True
-                focusable_count = 1
 
     content_obj = {
         'id': index, 
-        'level': level/2,
         'atTag': content_list[0],
         'htmlTag': html_tag,
         'isFocusable': is_focusable,
-        'focusableSum': focusable_count,
         'var': var_object,
-        'parent': 'null',
-        'children': [],
     }
     return content_obj
 
@@ -72,94 +64,63 @@ def get_tree(f_name):
     with open(path, 'r') as f_r:
         lines = f_r.read().splitlines()
         for index, line in enumerate(lines):
-            item = create_content_object(index, line)
+            level = get_level(line)
+            node = {
+                'id': index,
+                'depth': level/2,
+                'parent': -1,
+                'children': [] 
+            }
             if len(tree_data) == 0:
-                tree_data.append(item)
+                tree_data.append(node)
             else:
-                insert(tree_data[0], item)
-    return json.dumps(tree_data)
+                insert(tree_data[0], node)
+    return json.dumps(tree_data, indent=4)
 
+def get_content_list(f_name):
+    path = folder_name + '/' + f_name
 
-def focusable_search(node):
-    focusable_sum = node['focusableSum']
-    for child in node['children']:
-        if len(child['children']) != 0:
-            focusable_sum += focusable_search(child)
-        else:
-            if child['isFocusable'] == True:
-                focusable_sum += 1
-    node['focusableSum'] = focusable_sum
-    return node['focusableSum']
+    node_list = []
+    with open(path, 'r') as f_r:
+        lines = f_r.read().splitlines()
+        for index, line in enumerate(lines):
+            level = get_level(line)
+            item = create_content_object(index, line[level:])
+            node_list.append(item)
+    return json.dumps(node_list, indent=4)
 
-
-def focusable_count(json_data):
-    tree_data = json.loads(json_data)
-    focusable_search(tree_data[0])
-    return tree_data
-
-def dfs_with_child(node):
-    for child in node['children'][:]:
-        if child['focusableSum'] > 0:
-            if not (child['isFocusable'] and child['focusableSum'] == 1):
-                dfs_with_child(child)
-        else:
-            node['children'].remove(child)
-
-
-def dfs_without_child(node):
-    for child in node['children'][:]:
-        if child['focusableSum'] > 0:
-            dfs_without_child(child)
-        else:
-            node['children'].remove(child)
-
-def dfs_without_child_reduction(node):
+def dfs_reduction(node):
     if len(node['children']) == 1:
         if len(node['children'][0]['children']) > 0:
             node['children'] = node['children'][0]['children']
-            dfs_without_child_reduction(node)
+            dfs_reduction(node)
         else:
             node.update(node['children'][0])
     else:
         for child in node['children'][:]:
-            dfs_without_child_reduction(child)
+            dfs_reduction(child)
 
-def get_focusable_tree_with_child(json_data):
-    tree_data = focusable_count(json_data)
-    dfs_with_child(tree_data[0])
-    return json.dumps(tree_data)
+def dfs_update_parent_and_depth(node):
+    for child in node['children'][:]:
+        child['parent'] = node['id']
+        child['depth'] = node['depth'] + 1
+        dfs_update_parent_and_depth(child)
 
-def get_focusable_tree_without_child(json_data):
-    tree_data = focusable_count(json_data)
-    dfs_without_child(tree_data[0])
-    return json.dumps(tree_data)
 
-def get_focusable_tree_without_child_reduction(json_data):
-    tree_data = focusable_count(json_data)
-    dfs_without_child(tree_data[0])
-    dfs_without_child_reduction(tree_data[0])
+def get_tree_reduction(json_data):
+    tree_data = json.loads(json_data)
+    dfs_reduction(tree_data[0])
+    dfs_update_parent_and_depth(tree_data[0])
     return json.dumps(tree_data, indent=4)
 
-def dfs_html_tag(node, html_tag):
-    for child in node['children'][:]:
-        if not child['htmlTag'] == '':
-            if child['htmlTag'] in html_tag:
-                html_tag[child['htmlTag']] += 1
-            else:
-                html_tag[child['htmlTag']] = 1
-        dfs_html_tag(child, html_tag)
-
-def get_html_tag_portion(json_data):
-    tree_data = json.loads(json_data)
-    html_tag = {}
-    dfs_html_tag(tree_data[0], html_tag)
-    return json.dumps([html_tag])
-
-def convert_json_to_txt(json_data):
-    with open('data.txt', 'w') as outfile:
+def convert_json_to_txt(f_name, json_data):
+    with open(f_name, 'w') as outfile:
         outfile.write(json_data)
 
 if __name__ == "__main__":
-    tree = get_tree('naver.AT')
-    tree = get_focusable_tree_without_child_reduction(tree)
-    convert_json_to_txt(tree)
+    f_name = 'naver.AT'
+    tree = get_tree(f_name)
+    tree = get_tree_reduction(tree)
+    convert_json_to_txt('tree.json', tree)
+    node_list = get_content_list(f_name)
+    convert_json_to_txt('node.json', node_list)
