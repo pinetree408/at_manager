@@ -30,6 +30,7 @@ def create_content_object(index, contents):
 
     is_focusable = False
     html_tag = ""
+    name = ""
 
     var_object = {}
     for j, content in enumerate(content_list):
@@ -41,6 +42,9 @@ def create_content_object(index, contents):
             if target_key == "htmlTag":
                 if len(target_value) > 0 and not "<" in target_value:
                     html_tag = target_value
+            elif target_key == "name":
+                if len(target_value) > 0:
+                    name = target_value
             else:
                 var_object[target_key] = target_value
         else:
@@ -51,8 +55,7 @@ def create_content_object(index, contents):
         'id': index, 
         'atTag': content_list[0],
         'htmlTag': html_tag,
-        'isFocusable': is_focusable,
-        'var': var_object,
+        'name': name,
     }
     return content_obj
 
@@ -65,10 +68,14 @@ def get_tree(f_name):
         lines = f_r.read().splitlines()
         for index, line in enumerate(lines):
             level = get_level(line)
+            item = create_content_object(index, line[level:])
             node = {
                 'id': index,
                 'depth': level/2,
                 'parent': -1,
+                'name': item['name'],
+                'atTag': item['atTag'],
+                'htmlTag': item['htmlTag'],
                 'children': [] 
             }
             if len(tree_data) == 0:
@@ -89,16 +96,16 @@ def get_content_list(f_name):
             node_list.append(item)
     return json.dumps(node_list, indent=4)
 
-def dfs_reduction(node):
+def dfs_one_child_reduction(node):
     if len(node['children']) == 1:
         if len(node['children'][0]['children']) > 0:
             node['children'] = node['children'][0]['children']
-            dfs_reduction(node)
+            dfs_one_child_reduction(node)
         else:
             node.update(node['children'][0])
     else:
         for child in node['children'][:]:
-            dfs_reduction(child)
+            dfs_one_child_reduction(child)
 
 def dfs_update_parent_and_depth(node):
     for child in node['children'][:]:
@@ -106,10 +113,23 @@ def dfs_update_parent_and_depth(node):
         child['depth'] = node['depth'] + 1
         dfs_update_parent_and_depth(child)
 
+def dfs_name_reduction(node):
+    for child in node['children'][:]:
+        if len(child['name']) == 0:
+            if len(child['children']) == 0:
+                node['children'].remove(child)
+            else:
+                dfs_name_reduction(child)
+        else:
+            dfs_name_reduction(child)
 
 def get_tree_reduction(json_data):
     tree_data = json.loads(json_data)
-    dfs_reduction(tree_data[0])
+    dfs_one_child_reduction(tree_data[0])
+    dfs_update_parent_and_depth(tree_data[0])
+    dfs_name_reduction(tree_data[0])
+    dfs_update_parent_and_depth(tree_data[0])
+    dfs_one_child_reduction(tree_data[0])
     dfs_update_parent_and_depth(tree_data[0])
     return json.dumps(tree_data, indent=4)
 
@@ -122,5 +142,3 @@ if __name__ == "__main__":
     tree = get_tree(f_name)
     tree = get_tree_reduction(tree)
     convert_json_to_txt('tree.json', tree)
-    node_list = get_content_list(f_name)
-    convert_json_to_txt('node.json', node_list)
