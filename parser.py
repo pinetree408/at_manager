@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import re
 import json
+import copy
 
 folder_name = 'AT'
 
@@ -113,24 +114,45 @@ def dfs_update_parent_and_depth(node):
         child['depth'] = node['depth'] + 1
         dfs_update_parent_and_depth(child)
 
-def dfs_name_reduction(node):
+def dfs_name_reduction_remain_parent(node):
     for child in node['children'][:]:
         if len(child['name']) == 0:
             if len(child['children']) == 0:
                 node['children'].remove(child)
             else:
-                dfs_name_reduction(child)
+                dfs_name_reduction_remain_parent(child)
         else:
-            dfs_name_reduction(child)
+            dfs_name_reduction_remain_parent(child)
+
+def dfs_name_reduction_remove_parent(node):
+    for child in node['children'][:]:
+        if len(child['name']) == 0:
+            if len(child['children']) == 0:
+                node['children'].remove(child)
+            else:
+                node['children'].extend(child['children'])
+                node['children'].remove(child)
+        else:
+            dfs_name_reduction_remove_parent(child)
 
 def get_tree_reduction(json_data):
     tree_data = json.loads(json_data)
+    prev_tree_data = copy.deepcopy(tree_data)
+    
     dfs_one_child_reduction(tree_data[0])
     dfs_update_parent_and_depth(tree_data[0])
-    dfs_name_reduction(tree_data[0])
+    dfs_name_reduction_remain_parent(tree_data[0])
     dfs_update_parent_and_depth(tree_data[0])
     dfs_one_child_reduction(tree_data[0])
     dfs_update_parent_and_depth(tree_data[0])
+
+    while tree_data != prev_tree_data:
+        print "reducting"
+        prev_tree_data = copy.deepcopy(tree_data)
+        dfs_name_reduction_remain_parent(tree_data[0])
+        dfs_update_parent_and_depth(tree_data[0])
+        dfs_one_child_reduction(tree_data[0])
+        dfs_update_parent_and_depth(tree_data[0])
     return json.dumps(tree_data, indent=4)
 
 def convert_json_to_txt(f_name, json_data):
