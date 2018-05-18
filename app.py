@@ -6,7 +6,7 @@ app = Flask(__name__)
 
 @app.route('/', methods = ['POST', 'GET'])
 def index():
-    f_name = 'naver.AT'
+    f_name = 'wiki.AT'
     at_type = 'all'
     if request.method == 'POST':
         f_name = str(request.form['site'])

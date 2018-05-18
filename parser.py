@@ -2,8 +2,14 @@
 import re
 import json
 import copy
+import codecs
 
-folder_name = 'AT'
+
+FOLDER_PATH = 'AT'
+ALL_NODE = {}
+NAME_EMPTY_NODES = {}
+MAX_CHILDREN = 0
+PREV_PRINTED_NODE_PARENT = -1
 
 def insert(tree, node):
     if len(tree['children']) == 0:
@@ -62,10 +68,10 @@ def create_content_object(index, contents):
 
 
 def get_tree(f_name):
-    path = folder_name + '/' + f_name
+    path = FOLDER_PATH + '/' + f_name
 
     tree_data = []
-    with open(path, 'r') as f_r:
+    with codecs.open(path, 'r', encoding='utf8') as f_r:
         lines = f_r.read().splitlines()
         for index, line in enumerate(lines):
             level = get_level(line)
@@ -156,11 +162,62 @@ def get_tree_reduction(json_data):
     return json.dumps(tree_data, indent=4)
 
 def convert_json_to_txt(f_name, json_data):
-    with open(f_name, 'w') as outfile:
+    with codecs.open(f_name, 'w', encoding='utf-8') as outfile:
         outfile.write(json_data)
 
+def dfs_analyze(node):
+    global ALL_NODE, NAME_EMPTY_NODES, MAX_CHILDREN, PREV_PRINTED_NODE_PARENT 
+    html_tag = node["htmlTag"]
+
+    if html_tag in ALL_NODE:
+        ALL_NODE[html_tag] += 1
+    else:
+        ALL_NODE[html_tag] = 1
+
+    if len(node["name"]) == 0:
+        if html_tag == "th":
+            if PREV_PRINTED_NODE_PARENT != node["parent"]:
+                print "----"
+                print node
+                PREV_PRINTED_NODE_PARENT = node["parent"]
+
+        if html_tag in NAME_EMPTY_NODES:
+            NAME_EMPTY_NODES[html_tag] += 1
+        else:
+            NAME_EMPTY_NODES[html_tag] = 1
+
+    if len(node['children']) >= MAX_CHILDREN:
+        MAX_CHILDREN = len(node['children'])
+
+    for child in node['children'][:]:
+        dfs_analyze(child)
+
+def analyze_tree(json_data):
+    tree_data = json.loads(json_data)
+    dfs_analyze(tree_data[0])
+
+    print "Target Site : Daum"
+    print "Max children len : ", MAX_CHILDREN
+    print "TAG\tALL\tNAME_EMPTY"
+    print "---\t---\t----------"
+    sum_all = 0
+    sum_name_empty = 0
+    for key in ALL_NODE.keys():
+        sum_all += ALL_NODE[key]
+        if key in NAME_EMPTY_NODES:
+            sum_name_empty += NAME_EMPTY_NODES[key]
+            print key + "\t" + str(ALL_NODE[key]) + "\t" + str(NAME_EMPTY_NODES[key])
+        else:
+            if key != "":
+                print key + "\t" + str(ALL_NODE[key]) + "\t0"
+            else:
+                print "text\t" + str(ALL_NODE[key]) + "\t0"
+    print "---\t---\t----------"
+    print "sum\t" + str(sum_all) + "\t" + str(sum_name_empty)
+
 if __name__ == "__main__":
-    f_name = 'naver.AT'
+    f_name = 'daum.AT'
     tree = get_tree(f_name)
     tree = get_tree_reduction(tree)
+    analyze_tree(tree)
     convert_json_to_txt('tree.json', tree)
