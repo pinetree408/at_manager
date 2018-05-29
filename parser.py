@@ -175,7 +175,7 @@ def dfs_analyze(node):
         ALL_NODE[html_tag] = 1
 
     if len(node["name"]) == 0:
-        if html_tag == "th":
+        if html_tag == "div":
             if PREV_PRINTED_NODE_PARENT != node["parent"]:
                 print "----"
                 print node
@@ -196,7 +196,7 @@ def analyze_tree(json_data):
     tree_data = json.loads(json_data)
     dfs_analyze(tree_data[0])
 
-    print "Target Site : Daum"
+    print "Target Site : Search"
     print "Max children len : ", MAX_CHILDREN
     print "TAG\tALL\tNAME_EMPTY"
     print "---\t---\t----------"
@@ -216,8 +216,9 @@ def analyze_tree(json_data):
     print "sum\t" + str(sum_all) + "\t" + str(sum_name_empty)
 
 if __name__ == "__main__":
-    f_name = 'daum.AT'
+    target_site = 'blog'
+    f_name = target_site + '.AT'
     tree = get_tree(f_name)
     tree = get_tree_reduction(tree)
     analyze_tree(tree)
-    convert_json_to_txt('tree.json', tree)
+    convert_json_to_txt(target_site+'.json', tree)
