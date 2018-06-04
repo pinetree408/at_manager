@@ -59,7 +59,7 @@ def create_content_object(index, contents):
                 is_focusable = True
 
     content_obj = {
-        'id': index, 
+        'id': index,
         'atTag': content_list[0],
         'htmlTag': html_tag,
         'name': name,
@@ -81,9 +81,11 @@ def get_tree(f_name):
                 'depth': level/2,
                 'parent': -1,
                 'name': item['name'],
+                'nameList': [],
                 'atTag': item['atTag'],
                 'htmlTag': item['htmlTag'],
-                'children': [] 
+                'reductedNode': [],
+                'children': []
             }
             if len(tree_data) == 0:
                 tree_data.append(node)
@@ -105,11 +107,29 @@ def get_content_list(f_name):
 
 def dfs_one_child_reduction(node):
     if len(node['children']) == 1:
-        if len(node['children'][0]['children']) > 0:
-            node['children'] = node['children'][0]['children']
-            dfs_one_child_reduction(node)
-        else:
+        reducted_node = {
+            'atTag': node['children'][0]['atTag'],
+            'htmlTag': node['children'][0]['htmlTag']
+        }
+        p_name = node['name']
+        c_name = node['children'][0]['name']
+
+        if p_name == '':
             node.update(node['children'][0])
+        elif p_name != '' and c_name == '':
+            node['reductedNode'].append(reducted_node)
+            node['children'] = node['children'][0]['children']
+        elif p_name != '' and c_name !='':
+            if p_name == c_name:
+                node['reductedNode'].append(reducted_node)
+                node['children'] = node['children'][0]['children']
+            else:
+                print node['name'], node['atTag'], node['htmlTag']
+                node['nameList'].append(c_name)
+                node['reductedNode'].append(reducted_node)
+                node['children'] = node['children'][0]['children']
+
+        dfs_one_child_reduction(node)
     else:
         for child in node['children'][:]:
             dfs_one_child_reduction(child)
@@ -144,7 +164,6 @@ def dfs_name_reduction_remove_parent(node):
 def get_tree_reduction(json_data):
     tree_data = json.loads(json_data)
     prev_tree_data = copy.deepcopy(tree_data)
-    
     dfs_one_child_reduction(tree_data[0])
     dfs_update_parent_and_depth(tree_data[0])
     dfs_name_reduction_remain_parent(tree_data[0])
@@ -162,11 +181,11 @@ def get_tree_reduction(json_data):
     return json.dumps(tree_data, indent=4)
 
 def convert_json_to_txt(f_name, json_data):
-    with codecs.open(f_name, 'w', encoding='utf-8') as outfile:
+    with codecs.open('results/' + f_name, 'w', encoding='utf-8') as outfile:
         outfile.write(json_data)
 
 def dfs_analyze(node):
-    global ALL_NODE, NAME_EMPTY_NODES, MAX_CHILDREN, PREV_PRINTED_NODE_PARENT 
+    global ALL_NODE, NAME_EMPTY_NODES, MAX_CHILDREN, PREV_PRINTED_NODE_PARENT
     html_tag = node["htmlTag"]
 
     if html_tag in ALL_NODE:
@@ -175,12 +194,13 @@ def dfs_analyze(node):
         ALL_NODE[html_tag] = 1
 
     if len(node["name"]) == 0:
+        '''
         if html_tag == "div":
             if PREV_PRINTED_NODE_PARENT != node["parent"]:
                 print "----"
                 print node
                 PREV_PRINTED_NODE_PARENT = node["parent"]
-
+        '''
         if html_tag in NAME_EMPTY_NODES:
             NAME_EMPTY_NODES[html_tag] += 1
         else:
@@ -196,7 +216,6 @@ def analyze_tree(json_data):
     tree_data = json.loads(json_data)
     dfs_analyze(tree_data[0])
 
-    print "Target Site : Search"
     print "Max children len : ", MAX_CHILDREN
     print "TAG\tALL\tNAME_EMPTY"
     print "---\t---\t----------"
@@ -216,9 +235,16 @@ def analyze_tree(json_data):
     print "sum\t" + str(sum_all) + "\t" + str(sum_name_empty)
 
 if __name__ == "__main__":
-    target_site = 'blog'
-    f_name = target_site + '.AT'
-    tree = get_tree(f_name)
-    tree = get_tree_reduction(tree)
-    analyze_tree(tree)
-    convert_json_to_txt(target_site+'.json', tree)
+    target_site_list = ['amazon', 'blog', 'daum', 'naver', 'news', 'search', 'wiki']
+    for target_site in target_site_list:
+        ALL_NODE = {}
+        NAME_EMPTY_NODES = {}
+        MAX_CHILDREN = 0
+        PREV_PRINTED_NODE_PARENT = -1
+
+        f_name = target_site + '.AT'
+        tree = get_tree(f_name)
+        tree = get_tree_reduction(tree)
+        print "Target Site :", target_site
+        analyze_tree(tree)
+        convert_json_to_txt(target_site+'.json', tree)
