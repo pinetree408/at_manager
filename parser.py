@@ -10,6 +10,7 @@ ALL_NODE = {}
 NAME_EMPTY_NODES = {}
 MAX_CHILDREN = 0
 
+
 def insert(tree, node):
     if len(tree['children']) == 0:
         tree['children'].append(node)
@@ -18,6 +19,7 @@ def insert(tree, node):
             tree['children'].append(node)
         elif tree['children'][-1]['depth'] < node['depth']:
             insert(tree['children'][-1], node)
+
 
 def get_level(line):
     level = 0
@@ -28,8 +30,11 @@ def get_level(line):
             break
     return level
 
+
 def create_content_object(contents):
-    matched_contents = re.findall('[a-zA-Z]+\s|[a-zA-Z]+=.[^=]+\s', contents + ' ')
+    matched_contents = re.findall(
+        '[a-zA-Z]+\s|[a-zA-Z]+=.[^=]+\s',
+        contents + ' ')
     content_list = [content.strip() for content in matched_contents]
 
     html_tag = ""
@@ -42,7 +47,7 @@ def create_content_object(contents):
             if target_value[0] == "'":
                 target_value = target_value[1:-1].strip()
             if target_key == "htmlTag":
-                if len(target_value) > 0 and not "<" in target_value:
+                if len(target_value) > 0 and "<" not in target_value:
                     html_tag = target_value
             elif target_key == "name":
                 if len(target_value) > 0:
@@ -79,10 +84,12 @@ def get_tree(f_name):
                 insert(tree_data[0], node)
     return json.dumps(tree_data, indent=4)
 
+
 def dfs_one_child_reduction(node):
     if len(node['children']) == 1:
+        child_node = node['children'][0]
         p_name = node['name']
-        c_name = node['children'][0]['name']
+        c_name = child_node['name']
 
         condition_one = (p_name == '') and (c_name == '')
         condition_two = (p_name == '') and (c_name != '')
@@ -91,23 +98,26 @@ def dfs_one_child_reduction(node):
         condition_four_one = condition_four and (p_name == c_name)
         condition_four_two = condition_four and (p_name != c_name)
 
-        if condition_one or condition_two or condition_three or condition_four_one:
+        if condition_one or condition_two or \
+                condition_three or condition_four_one:
             new_name = p_name if len(p_name) >= len(c_name) else c_name
             node['name'] = new_name
-            node['atTag'] = node['atTag'] + "-" + node['children'][0]['atTag']
-            node['htmlTag'] = node['htmlTag'] + "-" + node['children'][0]['htmlTag']
-            node['children'] = node['children'][0]['children']
+            node['atTag'] = node['atTag'] + "-" + child_node['atTag']
+            node['htmlTag'] = node['htmlTag'] + "-" + child_node['htmlTag']
+            node['children'] = child_node['children']
             dfs_one_child_reduction(node)
         elif condition_four_two:
-            dfs_one_child_reduction(node['children'][0])
+            dfs_one_child_reduction(child_node)
     else:
         for child in node['children'][:]:
             dfs_one_child_reduction(child)
+
 
 def dfs_update_depth(node):
     for child in node['children'][:]:
         child['depth'] = node['depth'] + 1
         dfs_update_depth(child)
+
 
 def dfs_name_reduction_remain_parent(node):
     for child in node['children'][:]:
@@ -115,6 +125,7 @@ def dfs_name_reduction_remain_parent(node):
             node['children'].remove(child)
         else:
             dfs_name_reduction_remain_parent(child)
+
 
 def get_tree_reduction(json_data):
     tree_data = json.loads(json_data)
@@ -129,9 +140,11 @@ def get_tree_reduction(json_data):
     dfs_update_depth(tree_data[0])
     return json.dumps(tree_data, indent=4)
 
+
 def convert_json_to_txt(f_name, json_data):
     with codecs.open('results/' + f_name, 'w', encoding='utf-8') as outfile:
         outfile.write(json_data)
+
 
 def dfs_analyze(node):
     global ALL_NODE, NAME_EMPTY_NODES, MAX_CHILDREN
@@ -154,6 +167,7 @@ def dfs_analyze(node):
     for child in node['children'][:]:
         dfs_analyze(child)
 
+
 def analyze_tree(json_data):
     tree_data = json.loads(json_data)
     dfs_analyze(tree_data[0])
@@ -164,20 +178,24 @@ def analyze_tree(json_data):
     sum_all = 0
     sum_name_empty = 0
     for key in ALL_NODE.keys():
-        sum_all += ALL_NODE[key]
+        values = ALL_NODE[key]
+        sum_all += values
         if key in NAME_EMPTY_NODES:
             sum_name_empty += NAME_EMPTY_NODES[key]
-            print key + "\t" + str(ALL_NODE[key]) + "\t" + str(NAME_EMPTY_NODES[key])
+            print key + "\t" + str(values) + "\t" + str(NAME_EMPTY_NODES[key])
         else:
             if key != "":
-                print key + "\t" + str(ALL_NODE[key]) + "\t0"
+                print key + "\t" + str(values) + "\t0"
             else:
-                print "text\t" + str(ALL_NODE[key]) + "\t0"
+                print "text\t" + str(values) + "\t0"
     print "---\t---\t----------"
     print "sum\t" + str(sum_all) + "\t" + str(sum_name_empty)
 
+
 if __name__ == "__main__":
-    target_site_list = ['amazon', 'blog', 'daum', 'naver', 'news', 'search', 'wiki']
+    target_site_list = [
+        'amazon', 'blog', 'daum', 'naver', 'news', 'search', 'wiki'
+    ]
     for target_site in target_site_list:
         ALL_NODE = {}
         NAME_EMPTY_NODES = {}

@@ -4,7 +4,8 @@ import parser
 
 app = Flask(__name__)
 
-@app.route('/', methods = ['POST', 'GET'])
+
+@app.route('/', methods=['POST', 'GET'])
 def index():
     f_name = 'wiki.AT'
     at_type = 'all'
@@ -16,7 +17,12 @@ def index():
     if at_type == 'reduction':
         tree = parser.get_tree_reduction(tree)
 
-    return render_template('index.html', f_name=f_name, at_type=at_type, json_dump=tree)
+    return render_template(
+        'index.html',
+        f_name=f_name,
+        at_type=at_type,
+        json_dump=tree)
+
 
 if __name__ == '__main__':
     app.run()
