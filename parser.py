@@ -3,12 +3,14 @@ import re
 import json
 import copy
 import codecs
+import glob
 
 
 FOLDER_PATH = 'AT'
 ALL_NODE = {}
 NAME_EMPTY_NODES = {}
 MAX_CHILDREN = 0
+WORD_SET = {}
 
 
 def insert(tree, node):
@@ -52,7 +54,6 @@ def create_content_object(contents):
             elif target_key == "name":
                 if len(target_value) > 0:
                     name = target_value
-
     content_obj = {
         'atTag': content_list[0],
         'htmlTag': html_tag,
@@ -61,8 +62,7 @@ def create_content_object(contents):
     return content_obj
 
 
-def get_tree(f_name):
-    path = FOLDER_PATH + '/' + f_name
+def get_tree(path):
 
     tree_data = []
     with codecs.open(path, 'r', encoding='utf8') as f_r:
@@ -147,8 +147,9 @@ def convert_json_to_txt(f_name, json_data):
 
 
 def dfs_analyze(node):
-    global ALL_NODE, NAME_EMPTY_NODES, MAX_CHILDREN
+    global ALL_NODE, NAME_EMPTY_NODES, MAX_CHILDREN, WORD_SET
     html_tag = node["htmlTag"].split('-')[0]
+    word_list = node["name"].split(' ')
 
     if html_tag in ALL_NODE:
         ALL_NODE[html_tag] += 1
@@ -163,6 +164,12 @@ def dfs_analyze(node):
 
     if len(node['children']) >= MAX_CHILDREN:
         MAX_CHILDREN = len(node['children'])
+
+    for i, word in enumerate(word_list):
+        if word in WORD_SET:
+            WORD_SET[word] += 1
+        else:
+            WORD_SET[word] = 1
 
     for child in node['children'][:]:
         dfs_analyze(child)
@@ -192,19 +199,29 @@ def analyze_tree(json_data):
     print "sum\t" + str(sum_all) + "\t" + str(sum_name_empty)
 
 
-if __name__ == "__main__":
-    target_site_list = [
-        'amazon', 'blog', 'daum', 'naver', 'news', 'search', 'wiki'
-    ]
-    for target_site in target_site_list:
-        ALL_NODE = {}
-        NAME_EMPTY_NODES = {}
-        MAX_CHILDREN = 0
-        PREV_PRINTED_NODE_PARENT = -1
+def word_analyze(json_data):
+    tree_data = json.loads(json_data)
+    dfs_analyze(tree_data[0])
 
-        f_name = target_site + '.AT'
-        tree = get_tree(f_name)
-        tree = get_tree_reduction(tree)
-        print "Target Site :", target_site
-        analyze_tree(tree)
-        convert_json_to_txt(target_site+'.json', tree)
+    print "# Words", len(WORD_SET.keys())
+
+
+if __name__ == "__main__":
+    target_site_dir_list = [
+        'google_news',
+    ]
+    for target_site_dir in target_site_dir_list:
+        target_site_path_list = glob.glob("AT/" + target_site_dir + "/*.AT")
+        for target_site_path in target_site_path_list:
+            ALL_NODE = {}
+            NAME_EMPTY_NODES = {}
+            WORD_SET = {}
+            MAX_CHILDREN = 0
+            PREV_PRINTED_NODE_PARENT = -1
+
+            tree = get_tree(target_site_path)
+            tree = get_tree_reduction(tree)
+            print "Target Site :", target_site_path
+            # analyze_tree(tree)
+            word_analyze(tree)
+            # convert_json_to_txt(target_site+'.json', tree)
