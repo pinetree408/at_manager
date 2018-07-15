@@ -4,23 +4,21 @@ import json
 import copy
 import codecs
 import glob
+import os
+import math
 
 
 FOLDER_PATH = 'AT'
-ALL_NODE = {}
-NAME_EMPTY_NODES = {}
-MAX_CHILDREN = 0
-WORD_SET = {}
 
 
-def insert(tree, node):
+def insert_node(tree, node):
     if len(tree['children']) == 0:
         tree['children'].append(node)
     else:
         if tree['children'][-1]['depth'] == node['depth']:
             tree['children'].append(node)
         elif tree['children'][-1]['depth'] < node['depth']:
-            insert(tree['children'][-1], node)
+            insert_node(tree['children'][-1], node)
 
 
 def get_level(line):
@@ -81,7 +79,7 @@ def get_tree(path):
             if len(tree_data) == 0:
                 tree_data.append(node)
             else:
-                insert(tree_data[0], node)
+                insert_node(tree_data[0], node)
     return json.dumps(tree_data, indent=4)
 
 
@@ -132,7 +130,6 @@ def get_tree_reduction(json_data):
     prev_tree_data = []
 
     while tree_data != prev_tree_data:
-        print "reducting"
         prev_tree_data = copy.deepcopy(tree_data)
         dfs_name_reduction_remain_parent(tree_data[0])
         dfs_one_child_reduction(tree_data[0])
@@ -141,69 +138,65 @@ def get_tree_reduction(json_data):
     return json.dumps(tree_data, indent=4)
 
 
-def convert_json_to_txt(f_name, json_data):
-    with codecs.open('results/' + f_name, 'w', encoding='utf-8') as outfile:
-        outfile.write(json_data)
-
-
-def dfs_analyze(node):
-    global ALL_NODE, NAME_EMPTY_NODES, MAX_CHILDREN, WORD_SET
-    html_tag = node["htmlTag"].split('-')[0]
-    word_list = node["name"].split(' ')
-
-    if html_tag in ALL_NODE:
-        ALL_NODE[html_tag] += 1
-    else:
-        ALL_NODE[html_tag] = 1
-
-    if len(node["name"]) == 0:
-        if html_tag in NAME_EMPTY_NODES:
-            NAME_EMPTY_NODES[html_tag] += 1
-        else:
-            NAME_EMPTY_NODES[html_tag] = 1
-
-    if len(node['children']) >= MAX_CHILDREN:
-        MAX_CHILDREN = len(node['children'])
-
-    for i, word in enumerate(word_list):
-        if word in WORD_SET:
-            WORD_SET[word] += 1
-        else:
-            WORD_SET[word] = 1
-
-    for child in node['children'][:]:
-        dfs_analyze(child)
-
-
-def analyze_tree(json_data):
+def word_analyze_dfs(json_data):
     tree_data = json.loads(json_data)
-    dfs_analyze(tree_data[0])
+    word_set = {}
 
-    print "Max children len : ", MAX_CHILDREN
-    print "TAG\tALL\tNAME_EMPTY"
-    print "---\t---\t----------"
-    sum_all = 0
-    sum_name_empty = 0
-    for key in ALL_NODE.keys():
-        values = ALL_NODE[key]
-        sum_all += values
-        if key in NAME_EMPTY_NODES:
-            sum_name_empty += NAME_EMPTY_NODES[key]
-            print key + "\t" + str(values) + "\t" + str(NAME_EMPTY_NODES[key])
-        else:
-            if key != "":
-                print key + "\t" + str(values) + "\t0"
+    will_visit = []
+    visited = []
+
+    will_visit.append(tree_data[0])
+
+    while(will_visit):
+        node = will_visit.pop()
+        visited.append(node)
+
+        word_list = list(set([w.strip() for w in node['name'].split(' ')]))
+        for word in word_list:
+            if not word:
+                continue
+
+            if word in word_set:
+                word_set[word] = word_set[word] + 1
             else:
-                print "text\t" + str(values) + "\t0"
-    print "---\t---\t----------"
-    print "sum\t" + str(sum_all) + "\t" + str(sum_name_empty)
+                word_set[word] = 1
+
+        for child in node['children']:
+            if child not in visited:
+                will_visit.append(child)
+
+    return word_set
 
 
-def word_analyze(json_data):
+def node_analyze_dfs(json_data):
     tree_data = json.loads(json_data)
-    dfs_analyze(tree_data[0])
+    node_num = 0
 
-    print "# Words", len(WORD_SET.keys())
+    will_visit = []
+    visited = []
+
+    will_visit.append(tree_data[0])
+
+    while(will_visit):
+        node = will_visit.pop()
+        visited.append(node)
+
+        node_num = node_num + 1
+
+        for child in node['children']:
+            if child not in visited:
+                will_visit.append(child)
+
+    return node_num
+
+
+def convert_json_to_txt(json_data, f_name, target_site_dir):
+    if not os.path.exists('results/' + target_site_dir):
+        os.makedirs('results/' + target_site_dir)
+    with codecs.open(
+            'results/' + target_site_dir + '/' + f_name,
+            'w', encoding='utf-8') as outfile:
+        outfile.write(json_data)
 
 
 if __name__ == "__main__":
@@ -211,17 +204,32 @@ if __name__ == "__main__":
         'google_news',
     ]
     for target_site_dir in target_site_dir_list:
-        target_site_path_list = glob.glob("AT/" + target_site_dir + "/*.AT")
+        target_site_path_list = glob.glob(
+            FOLDER_PATH + "/" + target_site_dir + "/*.AT"
+        )
+        all_word_set = {}
+        all_node_num = 0
         for target_site_path in target_site_path_list:
-            ALL_NODE = {}
-            NAME_EMPTY_NODES = {}
-            WORD_SET = {}
-            MAX_CHILDREN = 0
-            PREV_PRINTED_NODE_PARENT = -1
-
             tree = get_tree(target_site_path)
             tree = get_tree_reduction(tree)
-            print "Target Site :", target_site_path
-            # analyze_tree(tree)
-            word_analyze(tree)
-            # convert_json_to_txt(target_site+'.json', tree)
+
+            node_num = node_analyze_dfs(tree)
+            all_node_num = all_node_num + node_num
+            word_set = word_analyze_dfs(tree)
+            for key in word_set.keys():
+                if key in all_word_set:
+                    all_word_set[key] = all_word_set[key] + word_set[key]
+                else:
+                    all_word_set[key] = word_set[key]
+
+            target_site = target_site_path.split('/')[2].split('.')[0]
+            convert_json_to_txt(tree, target_site+'.json', target_site_dir)
+
+        idf_set = {}
+        for word in all_word_set.keys():
+            idf = math.log10((all_node_num * 1.0) / (all_word_set[word] + 1))
+            idf_set[word] = idf
+
+        convert_json_to_txt(
+            json.dumps(idf_set, indent=4),
+            'idf.json', target_site_dir)
