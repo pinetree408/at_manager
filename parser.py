@@ -151,15 +151,19 @@ def word_analyze_dfs(json_data):
         node = will_visit.pop()
         visited.append(node)
 
-        word_list = list(set([w.strip() for w in node['name'].split(' ')]))
-        for word in word_list:
-            if not word:
-                continue
+        word_list = [w.strip() for w in node['name'].split(' ')]
+        word_list = [w for w in word_list if w]
+        bigram_list = []
+        for i in range(len(word_list)):
+            if i < len(word_list) - 1:
+                bigram = word_list[i] + ' ' + word_list[i+1]
+                bigram_list.append(bigram)
 
-            if word in word_set:
-                word_set[word] = word_set[word] + 1
+        for bigram in bigram_list:
+            if bigram in word_set:
+                word_set[bigram] = word_set[bigram] + 1
             else:
-                word_set[word] = 1
+                word_set[bigram] = 1
 
         for child in node['children']:
             if child not in visited:
