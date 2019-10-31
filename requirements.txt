@@ -2,7 +2,7 @@ click==6.7
 configparser==3.5.0
 enum34==1.1.6
 flake8==3.5.0
-Flask==0.12.2
+Flask==1.0
 itsdangerous==0.24
 Jinja2==2.10
 MarkupSafe==1.0
